@@ -756,7 +756,7 @@ def metadata_collection(sat_list, Sat, filepath_data, sitename):
                 metadata[sat_list[i]]['filenames'].append(Sat[i].getInfo().get('features')[j]['id'])
                 metadata[sat_list[i]]['acc_georef'].append(Sat[i].getInfo().get('features')[j]['bands'][0]['crs_transform'])
                 metadata[sat_list[i]]['epsg'].append(int(Sat[i].getInfo().get('features')[j]['bands'][0]['crs'].lstrip('EPSG:')))
-                d = datetime.strptime(Sentinel2.getInfo().get('features')[j]['properties']['DATATAKE_IDENTIFIER'][5:13],'%Y%m%d')
+                d = datetime.strptime(Sat[i].getInfo().get('features')[j]['properties']['DATATAKE_IDENTIFIER'][5:13],'%Y%m%d')
                 metadata[sat_list[i]]['dates'].append(str(d.strftime('%Y-%m-%d')))
             print(sat_list[i],": ",(100*j/len(Sat[i].getInfo().get('features'))),'%')
     
