@@ -20,6 +20,7 @@ from datetime import datetime
 from IPython.display import clear_output
 import ee
 import pickle
+import math
 
 np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 
@@ -802,9 +803,9 @@ def save_shapefiles(output, geomtype, name_prefix, sitename):
     
     return
 
-def Separate_TimeSeries_year(output, key):
+def Separate_TimeSeries_year(cross_distance, output, key):
 
-    Date_Organised = [[2016]]
+    Date_Organised = [[datetime.strptime(min(output['dates']),'%Y-%m-%d').year]]
     Distance_Organised = [[]]
     Month_Organised = [[]]
 
@@ -819,18 +820,17 @@ def Separate_TimeSeries_year(output, key):
         if appended==False:
             Date_Organised.append([datetime.strptime(output['dates'][i],'%Y-%m-%d').year])
             Month_Organised.append([datetime.strptime(output['dates'][i],'%Y-%m-%d').month])
-            #print(Month_Organised)
             Distance_Organised.append([(cross_distance[key]- np.nanmedian(cross_distance[key]))[i]])
             
     DateArr = []
     DistanceAvgArr = []
     for i in range(len(Date_Organised)):
         DateArr.append(Date_Organised[i][0])
-        DistanceAvgArr.append(sum(Distance_Organised[i])/len(Distance_Organised[i]))
+        DistanceAvgArr.append(np.nanmean(Distance_Organised[i]))#sum(Distance_Organised[i])/len(Distance_Organised[i]))
     
     return Date_Organised, Month_Organised, Distance_Organised, DateArr, DistanceAvgArr
 
-def Separate_TimeSeries_month(output, key):
+def Separate_TimeSeries_month(cross_distance, output, key):
 
     Date_Organised = [[]]
     Distance_Organised = [[]]
@@ -860,6 +860,6 @@ def Separate_TimeSeries_month(output, key):
         DateArr.append(Month_Organised[i][0])
         temp_list = Distance_Organised[i]
         newlist = [x for x in temp_list if math.isnan(x) == False]
-        DistanceAvgArr.append(sum(newlist)/len(newlist))
+        DistanceAvgArr.append(np.nanmean(newlist))#sum(newlist)/len(newlist))
     
     return Date_Organised, Month_Organised, Distance_Organised, DateArr, DistanceAvgArr

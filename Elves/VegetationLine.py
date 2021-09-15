@@ -203,9 +203,12 @@ def extract_veglines(metadata, settings, polygon, dates):
                     if skip_image:
                         continue
             
+            print(ref_line)
+            print("hi", shoreline)
+            
             if max(scipy.spatial.distance.directed_hausdorff(ref_line, shoreline, seed=0))>settings['hausdorff_threshold']:
                 continue
-            
+         
             # append to output variables
             output_timestamp.append(metadata[satname]['dates'][i])
             output_shoreline.append(shoreline)
@@ -665,7 +668,7 @@ def process_shoreline(contours, cloud_mask, georef, image_epsg, settings):
     
     contour_latlon = Toolbox.convert_epsg(contours_world, image_epsg, 4326)
     
-    contour_proj = Toolbox.convert_epsg(contour_latlon, 4326, settings['projection_epsg'])
+    contour_proj = Toolbox.convert_epsg(contour_latlon, 4326, settings['output_epsg'])
 
     # remove contours that have a perimeter < min_length_sl (provided in settings dict)
     # this enables to remove the very small contours that do not correspond to the shoreline

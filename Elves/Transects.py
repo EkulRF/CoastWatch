@@ -105,7 +105,7 @@ def produce_transects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceI
     return
     
 
-def compute_intersection(output, transects, settings):
+def compute_intersection(output, transects, settings, linetype):
     """
     Computes the intersection between the 2D shorelines and the shore-normal.
     transects. It returns time-series of cross-shore distance along each transect.
@@ -127,8 +127,16 @@ def compute_intersection(output, transects, settings):
     cross_dist: dict
         time-series of cross-shore distance along each of the transects. 
         Not tidally corrected.        
-    """    
-        
+    """  
+    
+    """
+    if (linetype+'transect_time_series.csv') in os.listdir(settings['inputs']['filepath']):
+        print('Cross-distance calculations already exist and were loaded')
+        with open(os.path.join(settings['inputs']['filepath'], linetype+'transect_time_series.csv'), 'rb') as f:
+            cross_dist = pickle.load(f)
+        return cross_dist
+    """
+    
     # loop through shorelines and compute the median intersection    
     intersections = np.zeros((len(output['shorelines']),len(transects)))
     for i in range(len(output['shorelines'])):
@@ -183,7 +191,7 @@ def compute_intersection(output, transects, settings):
     for key in transects.keys():
         out_dict['Transect '+ key] = cross_dist[key]
     df = pd.DataFrame(out_dict)
-    fn = os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],
+    fn = os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],linetype+
                       'transect_time_series.csv')
     df.to_csv(fn, sep=',')
     print('Time-series of the shoreline change along the transects saved as:\n%s'%fn)
@@ -232,3 +240,48 @@ def stuffIntoLibrary(geo, image_epsg, projection_epsg, filepath, sitename):
             pickle.dump(transects_latlon, f)
             
     return transects_latlon, transects_proj
+
+def transect_compiler(Rows, transect_proj, transect_interval, output):
+    
+    cross_distance_condensed = dict([])
+    standard_err_condensed = dict([])
+    transect_condensed = dict([])
+    Dates = dict([])
+    new_Transect = 1
+
+    cross_arr = []
+    trans_arr = []
+
+    for i in range(len(Rows[1])):
+    
+        arr = []
+        for k in range(len(Rows)):
+            if k == 0:
+                continue
+            try:
+                arr.append(float(Rows[k][i]))
+            except:
+                arr.append(np.nan)
+
+        cross_arr.append(arr)
+    
+        trans_arr.append(transect_proj[list(transect_proj.keys())[i]])
+
+        if (i%transect_interval != 0) or i==0:
+            continue
+        
+        std = np.nanstd(cross_arr,0)
+        for j in range(len(std)):
+            std[j] = std[j]/transect_interval**0.5
+    
+        NaN_mask = np.isfinite(np.nanmean(cross_arr,0))
+        cross_distance_condensed['Transect_'+str(new_Transect)+'-'+str(new_Transect+transect_interval-1)] = np.nanmean(cross_arr,0).astype(np.double)[NaN_mask]
+        standard_err_condensed['Transect_'+str(new_Transect)+'-'+str(new_Transect+transect_interval-1)] = std.astype(np.double)[NaN_mask]
+        Dates['Transect_'+str(new_Transect)+'-'+str(new_Transect+transect_interval-1)] = np.array(output['dates'])[NaN_mask]
+        transect_condensed['Transect_'+str(new_Transect)+'-'+str(new_Transect+transect_interval-1)] = np.mean(trans_arr,0).astype(np.double)#[NaN_mask]
+        new_Transect += transect_interval
+    
+        cross_arr = []
+        trans_arr = []
+        
+    return cross_distance_condensed, standard_err_condensed, transect_condensed, Dates
