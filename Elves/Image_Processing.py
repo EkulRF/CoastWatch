@@ -171,23 +171,6 @@ def preprocess_single(fn, satname, settings, polygon, dates):
         #Apply the mask to the image and display the result.
         masked = img.updateMask(mask);
         
-        """
-        georef = Landsat8.getInfo().get('features')[fn]['bands'][0]['crs_transform']
-
-        georef = Landsat8.getInfo().get('features')[0]['bands'][0]['crs_transform']
-        
-        georef_old = []
-        for i in range(len(georef)):
-            georef_old.append(georef[i])
-        
-        georef[0] = georef_old[2]
-        georef[1] = georef_old[0]
-        georef[2] = georef_old[1]
-        georef[3] = georef_old[5]
-        georef[4] = georef_old[3]
-        georef[5] = georef_old[4]
-        """
-        
         
         x, y = polygon[0][3]
         epsg = int(Landsat8.getInfo().get('features')[0]['bands'][0]['crs'].lstrip('EPSG:'))
@@ -916,8 +899,7 @@ def get_reference_sl(metadata, settings, polygon, dates):
                 pts_sl = np.delete(pts_sl,0,axis=0)
                 # convert world image coordinates to user-defined coordinate system
                 image_epsg = metadata[satname]['epsg'][0]
-                pts_coords = Toolbox.convert_epsg(pts_sl, image_epsg, settings['output_epsg'])
-
+                pts_coords = Toolbox.convert_epsg(pts_sl, image_epsg, 32630)#settings['output_epsg'])
                 # save the reference shoreline as .pkl
                 filepath = os.path.join(filepath_data, sitename)
                 with open(os.path.join(filepath, sitename + '_reference_shoreline.pkl'), 'wb') as f:

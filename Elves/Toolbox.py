@@ -95,11 +95,8 @@ def convert_world2pix(points, georef):
         converted coordinates (pixel row and column)
     
     """
-    
     # make affine transformation matrix
-    aff_mat = np.array([[georef[1], georef[2], georef[0]],
-                       [georef[4], georef[5], georef[3]],
-                       [0, 0, 1]])
+    aff_mat = np.array([[georef[1], georef[2], georef[0]],[georef[4], georef[5], georef[3]],[0, 0, 1]])
     # create affine transformation
     tform = transform.AffineTransform(aff_mat)
     
@@ -117,7 +114,6 @@ def convert_world2pix(points, georef):
     else:
         print('invalid input type')
         raise
-        
     return points_converted
 
 

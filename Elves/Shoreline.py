@@ -538,7 +538,7 @@ def find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size, im_ref_buffer):
     im_wi_buffer = np.copy(im_wi)
     im_wi_buffer[~im_ref_buffer] = np.nan
     im_mwi_buffer = np.copy(im_mwi)
-    im_mwi_buffer[~im_ref_buffer] = np.nan
+    #im_mwi_buffer[~im_ref_buffer] = np.nan
     contours_wi = measure.find_contours(im_wi_buffer, t_wi)
     contours_mwi = measure.find_contours(im_mwi_buffer, t_mwi)
     # remove contour points that are NaNs (around clouds)

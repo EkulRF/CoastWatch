@@ -130,8 +130,6 @@ def extract_veglines(metadata, settings, polygon, dates):
 
             print('\r%s:   %d%%' % (satname,int(((i+1)/len(filenames))*100)), end='')
 
-            # get image filename
-            fn = Toolbox.get_filenames(filenames[i],filepath, satname)
             # preprocess image (cloud mask + pansharpening/downsampling)
             fn = int(i)
             im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = Image_Processing.preprocess_single(fn, satname, settings, polygon, dates)
@@ -143,6 +141,7 @@ def extract_veglines(metadata, settings, polygon, dates):
                 continue
             
             # get image spatial reference system (epsg code) from metadata dict
+            image_epsg = settings['output_epsg']
             image_epsg = metadata[satname]['epsg'][i]
             # compute cloud_cover percentage (with no data pixels)
             cloud_cover_combined = np.divide(sum(sum(cloud_mask.astype(int))),
@@ -202,9 +201,6 @@ def extract_veglines(metadata, settings, polygon, dates):
                     # if the user decides to skip the image, continue and do not save the mapped shoreline
                     if skip_image:
                         continue
-            
-            print(ref_line)
-            print("hi", shoreline)
             
             if max(scipy.spatial.distance.directed_hausdorff(ref_line, shoreline, seed=0))>settings['hausdorff_threshold']:
                 continue
@@ -517,12 +513,9 @@ def find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size, im_ref_buffer):
     # threshold the sand/water intensities
     int_all = np.append(int_veg,int_sand, axis=0)
     t_nvi = filters.threshold_otsu(int_all[:,0])
-    #t_wi = filters.threshold_otsu(int_all[:,1])
-    t_nvi += 0.08
     # find contour with MS algorithm
-    #im_wi_buffer = np.copy(im_wi)
-    #im_wi_buffer[~im_ref_buffer] = np.nan
     im_nvi_buffer = np.copy(im_nvi)
+    ### This is the problematic bit
     im_nvi_buffer[~im_ref_buffer] = np.nan
     #contours_wi = measure.find_contours(im_wi_buffer, t_wi)
     contours_nvi = measure.find_contours(im_nvi_buffer, t_nvi)
@@ -571,31 +564,32 @@ def create_shoreline_buffer(im_shape, georef, image_epsg, pixel_size, settings, 
     # initialise the image buffer
     im_buffer = np.ones(im_shape).astype(bool)
 
-    if 'reference_shoreline' in settings.keys():
+    # convert reference shoreline to pixel coordinates
+    ref_sl = settings['reference_shoreline']
+    print(ref_sl)
+    print(epsg,image_epsg)
+    ref_sl_conv = Toolbox.convert_epsg(ref_sl, epsg, image_epsg)[:,:-1]
+    ref_sl_pix = Toolbox.convert_world2pix(ref_sl_conv, georef)
+    print(ref_sl_pix)
+    ref_sl_pix_rounded = np.round(ref_sl_pix).astype(int)
+    # make sure that the pixel coordinates of the reference shoreline are inside the image
+    idx_row = np.logical_and(ref_sl_pix_rounded[:,0] > 0, ref_sl_pix_rounded[:,0] < im_shape[1])
+    idx_col = np.logical_and(ref_sl_pix_rounded[:,1] > 0, ref_sl_pix_rounded[:,1] < im_shape[0])
+    idx_inside = np.logical_and(idx_row, idx_col)
 
-        # convert reference shoreline to pixel coordinates
-        ref_sl = settings['reference_shoreline']
-        ref_sl_conv = Toolbox.convert_epsg(ref_sl, epsg, image_epsg)[:,:-1]
-        ref_sl_pix = Toolbox.convert_world2pix(ref_sl_conv, georef)
-        ref_sl_pix_rounded = np.round(ref_sl_pix).astype(int)
+    ref_sl_pix_rounded = ref_sl_pix_rounded[idx_inside,:]
 
-        # make sure that the pixel coordinates of the reference shoreline are inside the image
-        idx_row = np.logical_and(ref_sl_pix_rounded[:,0] > 0, ref_sl_pix_rounded[:,0] < im_shape[1])
-        idx_col = np.logical_and(ref_sl_pix_rounded[:,1] > 0, ref_sl_pix_rounded[:,1] < im_shape[0])
-        idx_inside = np.logical_and(idx_row, idx_col)
-        ref_sl_pix_rounded = ref_sl_pix_rounded[idx_inside,:]
+    # create binary image of the reference shoreline (1 where the shoreline is 0 otherwise)
+    im_binary = np.zeros(im_shape)
+    for j in range(len(ref_sl_pix_rounded)):
+        im_binary[ref_sl_pix_rounded[j,1], ref_sl_pix_rounded[j,0]] = 1
+    im_binary = im_binary.astype(bool)
 
-        # create binary image of the reference shoreline (1 where the shoreline is 0 otherwise)
-        im_binary = np.zeros(im_shape)
-        for j in range(len(ref_sl_pix_rounded)):
-            im_binary[ref_sl_pix_rounded[j,1], ref_sl_pix_rounded[j,0]] = 1
-        im_binary = im_binary.astype(bool)
-
-        # dilate the binary image to create a buffer around the reference shoreline
-        max_dist_ref_pixels = np.ceil(settings['max_dist_ref']/pixel_size)
-        se = morphology.disk(max_dist_ref_pixels)
-        im_buffer = morphology.binary_dilation(im_binary, se)
-
+    # dilate the binary image to create a buffer around the reference shoreline
+    max_dist_ref_pixels = np.ceil(settings['max_dist_ref']/pixel_size)
+    se = morphology.disk(max_dist_ref_pixels)
+    im_buffer = morphology.binary_dilation(im_binary, se)
+    print(im_buffer)
     return im_buffer
 
 def process_contours(contours):
@@ -669,7 +663,6 @@ def process_shoreline(contours, cloud_mask, georef, image_epsg, settings):
     contour_latlon = Toolbox.convert_epsg(contours_world, image_epsg, 4326)
     
     contour_proj = Toolbox.convert_epsg(contour_latlon, 4326, settings['output_epsg'])
-
     # remove contours that have a perimeter < min_length_sl (provided in settings dict)
     # this enables to remove the very small contours that do not correspond to the shoreline
     contours_long = []
@@ -685,7 +678,6 @@ def process_shoreline(contours, cloud_mask, georef, image_epsg, settings):
         x_points = np.append(x_points,contours_long[k][:,0])
         y_points = np.append(y_points,contours_long[k][:,1])
     contours_array = np.transpose(np.array([x_points,y_points]))
-    
     shoreline = contours_array
     
     contours_latlon_long = []
