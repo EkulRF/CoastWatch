@@ -179,8 +179,8 @@ def preprocess_single(fn, satname, settings, polygon, dates):
         outProj = Proj(init=string)
         eastings,northings = Transf(inProj,outProj,x,y)
         
-        georef = [eastings, 15, 0, northings, 0, -15]
-                
+        georef = [eastings, 22.1, 0, northings, 0, -22.1]
+              
         im_pan = geemap.ee_to_numpy(img, bands = ['B8'], region=ee.Geometry.Polygon(polygon))
         
         # size of pan image

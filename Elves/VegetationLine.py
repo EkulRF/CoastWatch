@@ -184,11 +184,12 @@ def extract_veglines(metadata, settings, polygon, dates):
                         # compute NDVI image (SWIR-G)
                         im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
                         # find water contours on NDVI grayscale image
-                        contours_nvi, t_ndvi = find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer)
+                        contours_nvi, t_ndvi = find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer, satname)
+                        
                 else:
                     # use classification to refine threshold and extract the sand/water interface
-                    contours_nvi, t_ndvi = find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size_pixels, im_ref_buffer)
-
+                    contours_nvi, t_ndvi = find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size_pixels, im_ref_buffer, satname)
+                    
                 # process the water contours into a shoreline
                 shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours_nvi, cloud_mask, georef, image_epsg, settings)
     
@@ -407,7 +408,7 @@ def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
 # CONTOUR MAPPING FUNCTIONS
 ###################################################################################################
 
-def find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer):
+def find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer, satname):
     """
     Traditional method for shoreline detection using a global threshold.
     Finds the water line by thresholding the Normalized Difference Water Index 
@@ -440,6 +441,11 @@ def find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer):
     # apply otsu's threshold
     vec = vec[~np.isnan(vec)]
     t_otsu = filters.threshold_otsu(vec)
+    if satname=='S2':
+        print("sentinel")
+        t_otsu+=0.09
+    else:
+        t_otsu=+0.205
     # use Marching Squares algorithm to detect contours on ndvi image
     im_ndvi_buffer = np.copy(im_ndvi)
     im_ndvi_buffer[~im_ref_buffer] = np.nan
@@ -449,7 +455,7 @@ def find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer):
 
     return contours, t_otsu
 
-def find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size, im_ref_buffer):
+def find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size, im_ref_buffer,satname):
     """
     New robust method for extracting shorelines. Incorporates the classification
     component to refine the treshold and make it specific to the sand/water interface.
@@ -513,6 +519,11 @@ def find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size, im_ref_buffer):
     # threshold the sand/water intensities
     int_all = np.append(int_veg,int_sand, axis=0)
     t_nvi = filters.threshold_otsu(int_all[:,0])
+    if satname=='S2':
+        print("sentinel")
+        t_nvi+=0.09
+    else:
+        t_nvi=+0.205
     # find contour with MS algorithm
     im_nvi_buffer = np.copy(im_nvi)
     ### This is the problematic bit
@@ -566,11 +577,10 @@ def create_shoreline_buffer(im_shape, georef, image_epsg, pixel_size, settings, 
 
     # convert reference shoreline to pixel coordinates
     ref_sl = settings['reference_shoreline']
-    print(ref_sl)
-    print(epsg,image_epsg)
+
     ref_sl_conv = Toolbox.convert_epsg(ref_sl, epsg, image_epsg)[:,:-1]
     ref_sl_pix = Toolbox.convert_world2pix(ref_sl_conv, georef)
-    print(ref_sl_pix)
+
     ref_sl_pix_rounded = np.round(ref_sl_pix).astype(int)
     # make sure that the pixel coordinates of the reference shoreline are inside the image
     idx_row = np.logical_and(ref_sl_pix_rounded[:,0] > 0, ref_sl_pix_rounded[:,0] < im_shape[1])
@@ -589,7 +599,7 @@ def create_shoreline_buffer(im_shape, georef, image_epsg, pixel_size, settings, 
     max_dist_ref_pixels = np.ceil(settings['max_dist_ref']/pixel_size)
     se = morphology.disk(max_dist_ref_pixels)
     im_buffer = morphology.binary_dilation(im_binary, se)
-    print(im_buffer)
+    
     return im_buffer
 
 def process_contours(contours):
@@ -1082,11 +1092,10 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     # automatically map the shoreline based on the classifier if enough sand pixels
     if sum(sum(im_labels[:,:,0])) > 10:
         # use classification to refine threshold and extract the sand/water interface
-        contours_ndvi, t_ndvi = find_wl_contours2(im_ms, im_labels, cloud_mask,
-                                                        buffer_size_pixels, im_ref_buffer)
+        contours_ndvi, t_ndvi = find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size_pixels, im_ref_buffer, satname)
     else:       
         # find water contours on NDVI grayscale image
-        contours_ndvi, t_ndvi = find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer)
+        contours_ndvi, t_ndvi = find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer, satname)
     """
     try:
         if sum(sum(im_labels[:,:,0])) > 10:
