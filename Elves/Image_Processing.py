@@ -124,7 +124,7 @@ def preprocess_single(fn, satname, settings, polygon, dates):
         outProj = Proj(init=string)
         eastings,northings = Transf(inProj,outProj,x,y)
         
-        georef = [eastings, 15, 0, northings, 0, -15]
+        georef = [eastings, 22.1, 0, northings, 0, -22.1]
         
         # check if -inf or nan values on any band and eventually add those pixels to cloud mask        
         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
