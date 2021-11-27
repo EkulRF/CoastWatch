@@ -16,6 +16,7 @@ import pdb
 from datetime import datetime
 from pathlib import Path
 import pyproj
+from pyproj import Proj
 
 # other modules
 import skimage.transform as transform
@@ -36,7 +37,7 @@ def produce_transects_all(SmoothingWindowSize, NoSmooths, TransectSpacing, Dista
             #Reprojects shape file from EPSG 4326 to 27700 (britain)
         
             shape = gpd.read_file(BasePath+FileSpec)
-            shape = shape.set_crs(4326)
+            #shape = shape.set_crs(4326)
             # change CRS to epsg 27700
             shape = shape.to_crs(crs=proj,epsg=4326)
             # write shp file
@@ -78,7 +79,7 @@ def produce_transects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceI
     Filename2SaveCoast = BasePath + '/My_Baseline.shp'
     
     shape = gpd.read_file(FileSpec)
-    shape = shape.set_crs(4326)
+    #shape = shape.set_crs(4326)
     # change CRS to epsg 27700
     #shape = shape.to_crs(crs=proj,epsg=4326)
     # write shp file
@@ -202,6 +203,10 @@ def stuffIntoLibrary(geo, image_epsg, projection_epsg, filepath, sitename):
     
     transect = Path("Data/" + sitename + "/transect_proj.pkl")
     
+    proj1 = Proj(init="epsg:"+str(image_epsg))
+    proj2 = Proj(init="epsg:"+str(4326))
+    proj3 = Proj(init="epsg:"+str(projection_epsg))
+    
     if transect.is_file():
         with open(os.path.join(filepath, sitename + '_transect_proj' + '.pkl'), 'rb') as f:
             transects_proj = pickle.load(f)
@@ -221,14 +226,14 @@ def stuffIntoLibrary(geo, image_epsg, projection_epsg, filepath, sitename):
     
         x,y = geo['geometry'][i].coords.xy
 
-        xy0 = pyproj.transform(image_epsg,4326,y[0],x[0])
-        xy1 = pyproj.transform(image_epsg,4326,y[1],x[1])
+        xy0 = pyproj.transform(proj1,proj2,y[0],x[0])
+        xy1 = pyproj.transform(proj1,proj2,y[1],x[1])
         coord0_latlon = [xy0[1],xy0[0]]
         coord1_latlon = [xy1[1],xy1[0]]
 
         transects_latlon[lib] = np.array([coord0_latlon, coord1_latlon])
-        x,y = pyproj.transform(4326,projection_epsg,transects_latlon[lib][0][1],transects_latlon[lib][0][0])
-        x1,y1 = pyproj.transform(4326,projection_epsg,transects_latlon[lib][1][1],transects_latlon[lib][1][0])
+        x,y = pyproj.transform(proj2,proj3,transects_latlon[lib][0][1],transects_latlon[lib][0][0])
+        x1,y1 = pyproj.transform(proj2,proj3,transects_latlon[lib][1][1],transects_latlon[lib][1][0])
         transects_proj[lib] = np.array([[x,y],[x1,y1]])
 
         print("Current Progress:",np.round(i/len(geo['geometry'])*100,2),"%")

@@ -442,7 +442,6 @@ def find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer, satname):
     vec = vec[~np.isnan(vec)]
     t_otsu = filters.threshold_otsu(vec)
     if satname=='S2':
-        print("sentinel")
         t_otsu+=0.09
     else:
         t_otsu=+0.205
@@ -520,7 +519,6 @@ def find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size, im_ref_buffer,s
     int_all = np.append(int_veg,int_sand, axis=0)
     t_nvi = filters.threshold_otsu(int_all[:,0])
     if satname=='S2':
-        print("sentinel")
         t_nvi+=0.09
     else:
         t_nvi=+0.205
