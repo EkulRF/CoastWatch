@@ -260,26 +260,26 @@ def transect_compiler(Rows, transect_proj, transect_range, output):
     for i in range(len(transect_range)):
         cross_arr = []
         trans_arr = []
-    for j in range(transect_range[i][0],transect_range[i][1]):
-        try:
-            arr = []
-            for k in range(len(Rows)-1):
-                try:
-                    arr.append(float(Rows[k][j]))
-                except:
-                    arr.append(np.nan)
-            cross_arr.append(arr)
-            trans_arr.append(transect_proj[list(transect_proj.keys())[j]])
-        except:
-            continue
-    std = np.nanstd(cross_arr,0)
-    for j in range(len(std)):
-        std[j] = std[j]/(abs(transect_range[i][0]-transect_range[i][1]))**0.5
-    
-    NaN_mask = np.isfinite(np.nanmean(cross_arr,0))
-    cross_distance_condensed['Transect_'+str(transect_range[i][0])+'-'+str(transect_range[i][1])] = np.nanmean(cross_arr,0).astype(np.double)[NaN_mask]
-    standard_err_condensed['Transect_'+str(transect_range[i][0])+'-'+str(transect_range[i][1])] = std.astype(np.double)[NaN_mask]
-    Dates['Transect_'+str(transect_range[i][0])+'-'+str(transect_range[i][1])] = np.array(output['dates'])[NaN_mask]
-    transect_condensed['Transect_'+str(transect_range[i][0])+'-'+str(transect_range[i][1])] = np.mean(trans_arr,0).astype(np.double)#[NaN_mask]
+        for j in range(transect_range[i][0],transect_range[i][1]):
+            try:
+                arr = []
+                for k in range(len(Rows)-1):
+                    try:
+                        arr.append(float(Rows[k][j]))
+                    except:
+                        arr.append(np.nan)
+                cross_arr.append(arr)
+                trans_arr.append(transect_proj[list(transect_proj.keys())[j]])
+            except:
+                continue
+        std = np.nanstd(cross_arr,0)
+        for j in range(len(std)):
+            std[j] = std[j]/(abs(transect_range[i][0]-transect_range[i][1]))**0.5
+
+        NaN_mask = np.isfinite(np.nanmean(cross_arr,0))
+        cross_distance_condensed['Transect_'+str(transect_range[i][0])+'-'+str(transect_range[i][1])] = np.nanmean(cross_arr,0).astype(np.double)[NaN_mask]
+        standard_err_condensed['Transect_'+str(transect_range[i][0])+'-'+str(transect_range[i][1])] = std.astype(np.double)[NaN_mask]
+        Dates['Transect_'+str(transect_range[i][0])+'-'+str(transect_range[i][1])] = np.array(output['dates'])[NaN_mask]
+        transect_condensed['Transect_'+str(transect_range[i][0])+'-'+str(transect_range[i][1])] = np.mean(trans_arr,0).astype(np.double)#[NaN_mask]
         
     return cross_distance_condensed, standard_err_condensed, transect_condensed, Dates
