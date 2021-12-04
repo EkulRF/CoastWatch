@@ -859,3 +859,7 @@ def Separate_TimeSeries_month(cross_distance, output, key):
         DistanceAvgArr.append(np.nanmean(newlist))#sum(newlist)/len(newlist))
     
     return Date_Organised, Month_Organised, Distance_Organised, DateArr, DistanceAvgArr
+
+def daterange(date1, date2):
+    for n in range(int(date2.year) - int(date1.year)+1):
+        yield int(date1.year) + n
